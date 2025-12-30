@@ -11,9 +11,8 @@ This setup has been tested in a Virtual Machine with this two specific network e
 1. **Host-Only Adapter:**
    * For me it was ideal for developing the script via SSH from the host machine.
    * It is isolated from the main LAN.
-2. **NAT + Port Foewarding:**
-   * Keeps the VM isolated from LAN but allows access via specific ports.
-   * It is very useful for strict isolted enviroments.
+2. **Bridged-adapter**
+* In this V1 of the proyect is easier than doing port forwarding or VPN but i will develop a version with all the possible cases.
 ## Quick Start
 # 1. Clone the repository
 git clone https://github.com/damianiglesias/pihole-ubuntu-deploy.git
