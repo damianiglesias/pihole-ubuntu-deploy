@@ -1,119 +1,109 @@
 #!/bin/bash
 
 # ==========================================
-# 🛡️ PI-HOLE ALL-IN-ONE DEPLOYMENT KIT
+# 🛡️ PI-HOLE DEPLOYMENT KIT (INTERACTIVE)
 # Author: [Your Name]
-# Version: 5.0 (Universal v5/v6 Compatibility)
+# Version: 7.0 (Interactive Password)
 # ==========================================
 
-# --- COLORS ---
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
-GRAY='\033[1;30m'
 NC='\033[0m' 
-
-# Default password
-ADMIN_PASS="password123"
-
-# --- SILENT EXECUTION FUNCTION ---
-execute_silent() {
-    local message="$1"
-    shift
-    local command="$@"
-    echo -ne "${BLUE}⏳ ${message}...${NC}"
-    if eval "$command" > /tmp/deploy_log.txt 2>&1; then
-        echo -e "\r${GREEN}✅ ${message}           ${NC}"
-    else
-        echo -e "\r${RED}❌ ${message} (Failed)${NC}"
-        cat /tmp/deploy_log.txt
-        exit 1
-    fi
-}
 
 # --- HEADER ---
 clear
 echo -e "${BLUE}################################################${NC}"
-echo -e "${BLUE}#      UBUNTU SERVER PI-HOLE INSTALLER         #${NC}"
-echo -e "${BLUE}#                                              #${NC}"
+echo -e "${BLUE}#     UBUNTU SERVER PI-HOLE INSTALLER v7       #${NC}"
+echo -e "${BLUE}#       (Interactive Security Edition)         #${NC}"
 echo -e "${BLUE}################################################${NC}"
-echo ""
 
 # 1. ROOT CHECK
 if [ "$EUID" -ne 0 ]; then 
-  echo -e "${RED}Please run as root (sudo ./deploy.sh)${NC}"
-  exit
+  echo -e "${RED}ERROR: Please run as root (sudo ./deploy.sh)${NC}"
+  exit 1
 fi
 
-# 2. SYSTEM UPDATE
-echo -e "${YELLOW}❓ Step 1: System Update${NC}"
-read -p "   Update OS packages? [y/n]: " choice
-if [[ "$choice" == "y" || "$choice" == "Y" ]]; then
-    execute_silent "Updating list" "apt-get update"
-    execute_silent "Upgrading packages" "apt-get upgrade -y"
-else
-    echo -e "${GRAY}⏭️  Skipping update...${NC}"
-fi
-echo ""
+# 2. FIX PORT 53 & RESTORE INTERNET
+echo -e "${YELLOW}🔧 Step 1: Configuring Network & DNS...${NC}"
+# Desactivamos el conflicto del puerto 53
+sed -r -i.orig 's/#?DNSStubListener=yes/DNSStubListener=no/g' /etc/systemd/resolved.conf > /dev/null 2>&1
+ln -sf /run/systemd/resolve/resolv.conf /etc/resolv.conf > /dev/null 2>&1
+# Forzamos DNS de Google para asegurar que la descarga funciona
+echo "nameserver 8.8.8.8" > /etc/resolv.conf
+systemctl restart systemd-resolved > /dev/null 2>&1
+echo -e "${GREEN}✅ Port 53 cleared & Internet restored.${NC}"
 
-# 3. FIX PORT 53
-echo -e "${YELLOW}🔧 Step 2: Fixing Port 53 conflict${NC}"
-if lsof -i :53 | grep -q "systemd-resolve"; then
-    sed -r -i.orig 's/#?DNSStubListener=yes/DNSStubListener=no/g' /etc/systemd/resolved.conf > /dev/null 2>&1
-    ln -sf /run/systemd/resolve/resolv.conf /etc/resolv.conf > /dev/null 2>&1
-    execute_silent "Restarting systemd-resolved" "systemctl restart systemd-resolved"
-else
-    echo -e "${GREEN}✅ Port 53 is clear.${NC}"
-fi
-echo ""
+# 3. INSTALL DEPENDENCIES
+echo -e "${YELLOW}📦 Step 2: Installing Dependencies...${NC}"
+apt-get update > /dev/null 2>&1
+apt-get install curl net-tools ufw lighttpd -y > /dev/null 2>&1
+echo -e "${GREEN}✅ Dependencies ready.${NC}"
 
 # 4. INSTALL PI-HOLE
-echo -e "${YELLOW}📦 Step 3: Installing Pi-hole${NC}"
-execute_silent "Installing dependencies" "apt-get install curl net-tools ufw -y"
-echo -e "${GRAY}   The interactive installer will start now.${NC}"
-read -p "   Press [Enter] to start..."
+echo -e "${YELLOW}🚀 Step 3: Installing Pi-hole Core...${NC}"
+echo -e "${YELLOW}   (Follow the blue screens - Accept Defaults)${NC}"
+read -p "   Press [ENTER] to start..."
 curl -sSL https://install.pi-hole.net | bash
 
+# 5. INTERACTIVE PASSWORD SETUP (Nueva Lógica)
 echo ""
+echo -e "${YELLOW}🔐 Step 4: Security Setup${NC}"
+echo "   Please define your Web Interface Password."
 
-# 5. SMART PASSWORD CONFIGURATION (v5 vs v6)
-echo -e "${YELLOW}🔐 Step 4: Configuring Admin Password${NC}"
+while true; do
+    echo -ne "${BLUE}   > Enter New Password: ${NC}"
+    read -s PASS_1
+    echo ""
+    echo -ne "${BLUE}   > Confirm Password:   ${NC}"
+    read -s PASS_2
+    echo ""
 
-sleep 5
+    if [ -z "$PASS_1" ]; then
+        echo -e "${RED}❌ Password cannot be empty.${NC}"
+    elif [ "$PASS_1" != "$PASS_2" ]; then
+        echo -e "${RED}❌ Passwords do not match. Try again.${NC}"
+    else
+        ADMIN_PASS=$PASS_1
+        echo -e "${GREEN}✅ Password matched.${NC}"
+        break
+    fi
+done
 
-PIHOLE_VERSION=$(pihole -v | grep "Pi-hole" | cut -d'v' -f2 | cut -d'.' -f1)
+# Aplicar contraseña según versión (v5 vs v6)
+echo -e "   Applying security settings..."
+PI_VERSION=$(pihole -v | grep "Pi-hole" | cut -d'v' -f2 | cut -d'.' -f1)
 
-if [[ "$PIHOLE_VERSION" == "6" ]]; then
-    # Quitamos la contraseña en v6 para evitar bloqueos
-    sudo pihole setpassword ""
-    echo -e "${GREEN}✅ Password REMOVED for v6 (Access granted without login)${NC}"
+if [[ "$PI_VERSION" == "6" ]]; then
+    # v6
+    pihole setpassword "$ADMIN_PASS" > /dev/null 2>&1
+    systemctl restart pihole-FTL > /dev/null 2>&1
 else
-    # Para la v5 seguimos usando la fija
-    sudo pihole -a -p $ADMIN_PASS
-    echo -e "${GREEN}✅ Password set for v5${NC}"
+    # v5
+    pihole -a -p "$ADMIN_PASS" > /dev/null 2>&1
 fi
+echo -e "${GREEN}✅ Access configured successfully.${NC}"
+
+
 # 6. FIREWALL
-echo -e "${YELLOW}🛡️ Step 5: Securing Firewall${NC}"
-execute_silent "Allowing SSH, DNS, HTTP" "ufw allow 22/tcp && ufw allow 53 && ufw allow 80/tcp"
-execute_silent "Enabling Firewall" "echo 'y' | ufw enable"
-echo ""
+echo -e "${YELLOW}🛡️ Step 5: Finalizing Firewall...${NC}"
+ufw allow 22/tcp > /dev/null 2>&1
+ufw allow 53 > /dev/null 2>&1
+ufw allow 80/tcp > /dev/null 2>&1
+echo "y" | ufw enable > /dev/null 2>&1
+echo -e "${GREEN}✅ Firewall active.${NC}"
 
 # 7. FINAL REPORT
 clear
-IP_ADDRESS=$(hostname -I | cut -d' ' -f1)
+IP_ADDR=$(hostname -I | cut -d' ' -f1)
 echo -e "${GREEN}################################################${NC}"
-echo -e "${GREEN}#           DEPLOYMENT COMPLETE!               #${NC}"
+echo -e "${GREEN}#          🎉 DEPLOYMENT SUCCESSFUL!           #${NC}"
 echo -e "${GREEN}################################################${NC}"
 echo ""
-echo -e "${BLUE}📡 Server IP:${NC}      ${IP_ADDRESS}"
-
-if [[ $IP_ADDRESS == 10.0.2.* ]]; then
-    echo -e "${RED}⚠️  VirtualBox NAT Detected!${NC}"
-    echo -e "   Use Port Forwarding or Bridge Mode to access."
-fi
-
-echo -e "${BLUE}💻 Web Interface:${NC}  http://${IP_ADDRESS}/admin"
-echo -e "${BLUE}🔑 Password:${NC}       ${ADMIN_PASS}"
+echo -e "${BLUE}📡 Server IP:${NC}      $IP_ADDR"
+echo -e "${BLUE}💻 Web Interface:${NC}  http://$IP_ADDR/admin"
+echo -e "${BLUE}🔑 Password:${NC}       (The one you just set)"
 echo ""
-echo -e "Enjoy your ad-free network!"
+echo -e "${RED}IMPORTANT:${NC} If login fails, open an INCOGNITO window."
+echo ""
