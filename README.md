@@ -18,18 +18,10 @@ This setup has been tested in a Virtual Machine with this two specific network e
 git clone https://github.com/damianiglesias/pihole-ubuntu-deploy.git
 # 2. Enter the directory
 cd pihole-ubuntu-deploy
-# 3. Grant exexution permissions (This works in case you cant execute the .sh)
+# 3. Grant exexution permissions (Only if the file can't execute)
 chmod +x *.sh
 # 4. Run the script
+./deploy.sh
+Or: (deprecated)
 ./install_prep.sh
 ./firewall_rules.sh
-
-## Troubleshooting
-# 1. Port 53 already in use
-On Ubuntu Server, the default `systemd-resolved` service binds to port 53, causing a conflict with Pi-hole (FTL). Follow these steps to disable the stub listener and free up the port.
-
-### Step 1: Edit the configuration file
-Open the resolved configuration file:
-sudo nano /etc/systemd/resolved.conf
-Find the line `#DNSStubListener=yes`, uncomment it (remove #) and change it to no. Save the file and restart systemd-resolved with the following command:
-sudo systemctl restart systemd-resolved
