@@ -22,6 +22,6 @@ cd pihole-ubuntu-deploy
 chmod +x *.sh
 # 4. Run the script
 ./deploy.sh
-Or: (deprecated)
+# Or: (deprecated)
 ./install_prep.sh
 ./firewall_rules.sh
