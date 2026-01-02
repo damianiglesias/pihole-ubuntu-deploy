@@ -3,7 +3,7 @@
 # ==========================================
 # PI-HOLE All-In-One Script
 # Author: Damian Iglesias
-# Version: 3.4 (Manual Unbound Config)
+# Version: 2.4
 # ==========================================
 
 GREEN='\033[0;32m'
@@ -13,10 +13,10 @@ YELLOW='\033[1;33m'
 GRAY='\033[1;30m'
 NC='\033[0m' 
 
-# Generate Random Password
+# To Generate Random Password
 GENERATED_PASS=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 12)
 
-# --- HEADER ---
+# header
 clear
 echo -e "${BLUE}"
 echo "  ____  _       _           _       "
@@ -25,10 +25,10 @@ echo " | |_) |_      | |__   ___ | | ___  "
 echo " |  __/| |_____| '_ \ / _ \| |/ _ \ "
 echo " | |   | |_____| | | | (_) | |  __/ "
 echo " |_|   |_|     |_| |_|\___/|_|\___| "
-echo "           INSTALLER v3.4           "
+echo "           INSTALLER v2.4           "
 echo -e "${NC}"
 
-# 1. ROOT CHECK
+# 1. root check
 if [ "$EUID" -ne 0 ]; then 
   echo -e "${RED}ERROR: Please run as root (sudo ./deploy.sh)${NC}"
   exit 1
@@ -54,7 +54,7 @@ echo -e "${GRAY}   (Follow the blue screens - Accept Defaults)${NC}"
 read -p "   Press [ENTER] to start..."
 curl -sSL https://install.pi-hole.net | bash
 
-# --- INTERACTIVE BLOCKLISTS ---
+# blocklists
 echo ""
 echo -e "${YELLOW} Step 3.5: Advanced Blocklists${NC}"
 read -p "   Install Advanced Lists? [y/n]: " list_choice
@@ -80,7 +80,7 @@ sleep 3
 pihole setpassword "$GENERATED_PASS"
 echo -e "${GREEN}✅ Password configured.${NC}"
 
-# --- UNBOUND SETUP (INSTALL ONLY) ---
+# Unbound Setup (Expermiental)
 echo ""
 echo -e "${YELLOW} Step 4.5: Unbound Recursive DNS${NC}"
 read -p "   Install Unbound? [y/n]: " unbound_choice
@@ -175,7 +175,7 @@ EOF
 fi
 echo ""
 
-# 8. REPORT FINAL
+# 8. final report
 clear
 if [[ -z "$FINAL_REPORT_IP" ]]; then
     if [[ -n "$SELECTED_IF" ]]; then
@@ -198,7 +198,7 @@ echo -e "${RED}   $GENERATED_PASS ${NC}"
 echo -e "   (Copy this password immediately!)"
 echo ""
 
-# --- INSTRUCCIONES MANUALES DE UNBOUND ---
+# --- unbound instructions ---
 if [[ "$unbound_choice" == "y" || "$unbound_choice" == "Y" ]]; then
     echo -e "${YELLOW} IMPORTANT - ENABLE UNBOUND MANUALLY:${NC}"
     echo -e "   1. Login to the Web Interface."
