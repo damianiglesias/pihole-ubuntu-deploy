@@ -3,7 +3,7 @@
 # ==========================================
 # PI-HOLE All-In-One Script
 # Author: Damian Iglesias
-# Version: 3.2 (Dual Config Fix v5/v6)
+# Version: 3.4 (Manual Unbound Config)
 # ==========================================
 
 GREEN='\033[0;32m'
@@ -25,7 +25,7 @@ echo " | |_) |_      | |__   ___ | | ___  "
 echo " |  __/| |_____| '_ \ / _ \| |/ _ \ "
 echo " | |   | |_____| | | | (_) | |  __/ "
 echo " |_|   |_|     |_| |_|\___/|_|\___| "
-echo "           INSTALLER v2.4           "
+echo "           INSTALLER v3.4           "
 echo -e "${NC}"
 
 # 1. ROOT CHECK
@@ -80,7 +80,7 @@ sleep 3
 pihole setpassword "$GENERATED_PASS"
 echo -e "${GREEN}✅ Password configured.${NC}"
 
-# --- UNBOUND SETUP (DUAL CONFIG FIX) ---
+# --- UNBOUND SETUP (INSTALL ONLY) ---
 echo ""
 echo -e "${YELLOW} Step 4.5: Unbound Recursive DNS${NC}"
 read -p "   Install Unbound? [y/n]: " unbound_choice
@@ -117,31 +117,7 @@ server:
     private-address: fe80::/10
 EOF
     systemctl restart unbound
-    
-    # --- MAGIC CONFIGURATION FIX (V5 & V6) ---
-    echo -e "${BLUE}⏳ Forcing DNS settings (Stopping FTL)...${NC}"
-    systemctl stop pihole-FTL
-    
-    # METODO 1: Pi-hole v5 (setupVars.conf)
-    if [ -f /etc/pihole/setupVars.conf ]; then
-        sed -i '/^PIHOLE_DNS_/d' /etc/pihole/setupVars.conf
-        echo "PIHOLE_DNS_1=127.0.0.1#5335" >> /etc/pihole/setupVars.conf
-    fi
-
-    # METODO 2: Pi-hole v6 (pihole.toml)
-    if [ -f /etc/pihole/pihole.toml ]; then
-        # Usamos sed para buscar la línea upstreamServers y reemplazarla a la fuerza
-        # Buscamos algo como upstreamServers = [ ... ] y lo cambiamos
-        sed -i 's/upstreamServers = .*/upstreamServers = ["127.0.0.1#5335"]/' /etc/pihole/pihole.toml
-        
-        # Si la línea no existe (instalación fresca), la añadimos después de [dns]
-        if ! grep -q "upstreamServers =" /etc/pihole/pihole.toml; then
-             sed -i '/\[dns\]/a upstreamServers = ["127.0.0.1#5335"]' /etc/pihole/pihole.toml
-        fi
-    fi
-    
-    systemctl start pihole-FTL
-    echo -e "${GREEN}✅ Unbound integrated (Config files updated).${NC}"
+    echo -e "${GREEN}✅ Unbound installed (See instructions at the end).${NC}"
 else
     echo -e "${GRAY}⏭  Skipping Unbound.${NC}"
 fi
@@ -219,9 +195,16 @@ echo -e "${BLUE} Web Interface:${NC}  http://$FINAL_REPORT_IP/admin"
 echo ""
 echo -e "${YELLOW} YOUR ADMIN PASSWORD:${NC}"
 echo -e "${RED}   $GENERATED_PASS ${NC}"
-echo ""
-if [[ "$unbound_choice" == "y" || "$unbound_choice" == "Y" ]]; then
-    echo -e "${GREEN}✅ DNS is set to Unbound (127.0.0.1#5335)${NC}"
-fi
 echo -e "   (Copy this password immediately!)"
 echo ""
+
+# --- INSTRUCCIONES MANUALES DE UNBOUND ---
+if [[ "$unbound_choice" == "y" || "$unbound_choice" == "Y" ]]; then
+    echo -e "${YELLOW} IMPORTANT - ENABLE UNBOUND MANUALLY:${NC}"
+    echo -e "   1. Login to the Web Interface."
+    echo -e "   2. Go to ${BLUE}Settings > DNS${NC}."
+    echo -e "   3. Uncheck 'Google' (IPv4)."
+    echo -e "   4. Check 'Custom 1 (IPv4)' and type: ${BLUE}127.0.0.1#5335${NC}"
+    echo -e "   5. Click 'Save' at the bottom."
+    echo ""
+fi
