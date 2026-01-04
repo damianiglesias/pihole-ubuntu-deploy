@@ -1,5 +1,4 @@
-<img width="225" height="225" alt="imagen" src="https://github.com/user-attachments/assets/fa2ca725-b4ef-44af-8eda-441c7479caae" />
-<img width="1011" height="565" alt="Captura de pantalla 2026-01-04 154114" src="https://github.com/user-attachments/assets/813ea6ec-0498-4727-aace-80166f50db4b" />
+<img width="225" height="225" alt="imagen" src="https://github.com/user-attachments/assets/fa2ca725-b4ef-44af-8eda-441c7479caae" /> <img width="1011" height="565" alt="Captura de pantalla 2026-01-04 154114" src="https://github.com/user-attachments/assets/813ea6ec-0498-4727-aace-80166f50db4b" />
 
 # pihole-ubuntu-deploy
 Automated deployment of DNS server (Pi-hole) on Ubuntu Server for blocking advertising and telemetry on local network. Student project. (First project)
