@@ -2,7 +2,7 @@
   <img src="https://github.com/user-attachments/assets/ea32eb46-31a2-48d9-93c0-587aefecc6f5" width="150">
   <h1>Automated Pi-hole & Unbound Installer for Ubuntu</h1>
 </div>
-# pihole-ubuntu-deploy
+Pihole-ubuntu-deploy
 Bash script to automate the installation of Pi-hole v6, Unbound, and Static IP on Ubuntu Server. Features PADD dashboard and auto-configuration. (First project)
 This project provides a set of Bash scripts to automate the installation, configuration, and security hardening of a Pi-hole server running on Ubuntu although its pretty basic. It transforms any virtual machine or old PC into a network-wide ad blocker.
 
