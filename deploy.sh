@@ -54,7 +54,7 @@ echo -e "${GRAY}   (Follow the blue screens - Accept Defaults)${NC}"
 read -p "   Press [ENTER] to start..."
 curl -sSL https://install.pi-hole.net | bash
 
-# --- INTERACTIVE BLOCKLISTS ---
+# BLOCKLISTS
 echo ""
 echo -e "${YELLOW} Step 3.5: Advanced Blocklists${NC}"
 read -p "   Install Advanced Lists? [y/n]: " list_choice
@@ -80,7 +80,7 @@ sleep 3
 pihole setpassword "$GENERATED_PASS"
 echo -e "${GREEN}✅ Password configured.${NC}"
 
-# --- UNBOUND SETUP ---
+# UNBOUND
 echo ""
 echo -e "${YELLOW} Step 4.5: Unbound Recursive DNS${NC}"
 read -p "   Install Unbound? [y/n]: " unbound_choice
@@ -227,7 +227,7 @@ EOF
 fi
 echo ""
 
-# 8. REPORT FINAL
+# 8. FINAL REPORT
 clear
 if [[ -z "$FINAL_REPORT_IP" ]]; then
     if [[ -n "$SELECTED_IF" ]]; then
