@@ -19,14 +19,14 @@ This setup has been tested in a Virtual Machine with this two specific network e
 2. **Bridged-adapter**
 * In this V1 of the proyect is easier than doing port forwarding or VPN but i will develop a version with all the possible cases.
 ## Quick Start
-# 1. Clone the repository
+ 1. Clone the repository
 git clone https://github.com/damianiglesias/pihole-ubuntu-deploy.git
-# 2. Enter the directory
+ 2. Enter the directory
 cd pihole-ubuntu-deploy
-# 3. Grant exexution permissions (Only if the file can't execute)
+ 3. Grant exexution permissions (Only if the file can't execute)
 chmod +x *.sh
-# 4. Run the script
+ 4. Run the script
 ./deploy.sh
-# Or: (deprecated)
+ Or: (deprecated)
 ./install_prep.sh
 ./firewall_rules.sh
