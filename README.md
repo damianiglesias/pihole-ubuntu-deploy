@@ -1,6 +1,7 @@
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/ea32eb46-31a2-48d9-93c0-587aefecc6f5"/> 
-</p>
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/ea32eb46-31a2-48d9-93c0-587aefecc6f5" width="150">
+  <h1>Automated Pi-hole & Unbound Installer for Ubuntu</h1>
+</div>
 
  # Disclaimer
  Unbound is in the script but not working. Although there are instructions in the script i'm looking forward to fix the issue in the next verisons.
