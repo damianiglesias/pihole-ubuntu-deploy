@@ -6,7 +6,7 @@
  # Disclaimer
  Unbound is in the script but not working. Although there are instructions in the script i'm looking forward to fix the issue in the next verisons.
 # pihole-ubuntu-deploy
-Automated deployment of DNS server (Pi-hole) on Ubuntu Server for blocking advertising and telemetry on local network. Student project. (First project)
+Bash script to automate the installation of Pi-hole v6, Unbound, and Static IP on Ubuntu Server. Features PADD dashboard and auto-configuration. (First project)
 This project provides a set of Bash scripts to automate the installation, configuration, and security hardening of a Pi-hole server running on Ubuntu although its pretty basic. It transforms any virtual machine or old PC into a network-wide ad blocker.
 ## Prerequisites
 *   **Hardware:** Virtual Machine, Raspberry Pi, or an old PC.
