@@ -63,7 +63,7 @@ if command -v pihole &> /dev/null; then
     # If option 2, we continue down to the normal script...
 fi
 # 2. FIX PORT 53 
-echo -e "${YELLOW} Step 1: Nuke DNS configuration...${NC}"
+echo -e "${YELLOW} Step 1: DNS configuration...${NC}"
 systemctl stop systemd-resolved
 systemctl disable systemd-resolved > /dev/null 2>&1
 rm -f /etc/resolv.conf
@@ -258,5 +258,5 @@ fi
 if [[ "$padd_choice" == "y" || "$padd_choice" == "Y" ]]; then
     echo -e "${YELLOW} PADD:${NC} Type ${BLUE}padd${NC} to view dashboard."
 fi
-echo -e "   (Copy this password immediately!)"
+echo -e "   (Enjoy!)"
 echo ""
