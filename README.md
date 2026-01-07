@@ -20,15 +20,23 @@ This setup has been tested in a Virtual Machine with this two specific network e
    * It is isolated from the main LAN.
 2. **Bridged-adapter**
 * In this V1 of the proyect is easier than doing port forwarding or VPN but i will develop a version with all the possible cases.
-## Quick Start
- 1. Clone the repository:
-git clone https://github.com/damianiglesias/pihole-ubuntu-deploy.git
- 2. Enter the directory:
+## Installation Methods
+Choose one that fits for you:
+# Method 1: Bash Script
+Installs Pi-hole & Unbound directly on the OS. Best for dedicated hardware (Raspberry Pi).
+### 1. Download the project
+git clone https://github.com/damianiglesias/pihole-ubuntu-deploy
+### 2. Get into the folder
 cd pihole-ubuntu-deploy
- 3. Grant exexution permissions (Only if the file can't execute):
-chmod +x *.sh
- 4. Run the script:
-./deploy.sh
- Or: (deprecated)
-./install_prep.sh
-./firewall_rules.sh
+### 3. Run the script
+sudo ./deploy.sh
+# Method 2: Ansible & Docker
+Deploys the stack using Docker Containers
+### 1. Download the project
+git clone https://github.com/damianiglesias/pihole-ubuntu-deploy
+### 2. Get into the folder 
+cd pihole-ubuntu-deploy/ansible
+### 3. Install ansible
+sudo apt update && sudo apt install ansible -y
+### 4. Run the playbook
+ansible-playbook -i inventory.ini install_pihole.yml
