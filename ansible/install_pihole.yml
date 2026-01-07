@@ -1,0 +1,126 @@
+---
+- name: Deploy Pi-hole and Unbound on Ubuntu (Docker)
+  hosts: pihole_server
+  become: yes
+  vars:
+    project_dir: "/root/pihole-docker"
+    pihole_password: "1234"
+
+  tasks:
+    - name: 1. Stop and Disable native services (Free up ports 53, 80, 5335)
+      service:
+        name: "{{ item }}"
+        state: stopped
+        enabled: no
+      loop:
+        - pihole-FTL
+        - unbound
+        - lighttpd
+        - systemd-resolved
+      ignore_errors: yes
+
+    - name: 2. Fix DNS resolution for Docker
+      lineinfile:
+        path: /etc/systemd/resolved.conf
+        regexp: '^#?DNSStubListener='
+        line: 'DNSStubListener=no'
+      notify: Restart systemd-resolved
+
+    - name: 3. Create generic resolv.conf (Google DNS)
+      copy:
+        dest: /etc/resolv.conf
+        content: "nameserver 8.8.8.8"
+        force: yes
+
+    - name: 4. Remove conflicting Docker packages
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: absent
+        purge: yes
+
+    - name: 5. Install dependencies
+      apt:
+        name:
+          - curl
+          - net-tools
+          - docker.io
+          - docker-compose-v2
+        state: present
+        update_cache: yes
+
+    - name: 6. Create Project Directory
+      file:
+        path: "{{ project_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: 7. Create Docker Compose file
+      copy:
+        dest: "{{ project_dir }}/docker-compose.yml"
+        content: |
+          services:
+            pihole:
+              container_name: pihole
+              image: pihole/pihole:latest
+              ports:
+                - "53:53/tcp"
+                - "53:53/udp"
+                - "80:80/tcp"
+              environment:
+                TZ: 'Europe/Madrid'
+                WEBPASSWORD: '{{ pihole_password }}'
+                PIHOLE_DNS_1: '172.20.0.5#5335'
+                PIHOLE_DNS_2: 'no'
+              networks:
+                pihole_net:
+                  ipv4_address: 172.20.0.2
+              volumes:
+                - './etc-pihole:/etc/pihole'
+                - './etc-dnsmasq.d:/etc/dnsmasq.d'
+              restart: unless-stopped
+
+            unbound:
+              container_name: unbound
+              image: mvance/unbound:latest
+              networks:
+                pihole_net:
+                  ipv4_address: 172.20.0.5
+              ports:
+                - "5335:5335/udp"
+              restart: unless-stopped
+
+          networks:
+            pihole_net:
+              driver: bridge
+              ipam:
+                config:
+                  - subnet: 172.20.0.0/16
+
+    - name: 8. Launch Containers
+      command: docker compose up -d
+      args:
+        chdir: "{{ project_dir }}"
+
+    - name: 9. Configure Firewall (UFW)
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop:
+        - '22'
+        - '80'
+        - '53'
+
+    - name: 10. Enable Firewall
+      ufw:
+        state: enabled
+
+  handlers:
+    - name: Restart systemd-resolved
+      service:
+        name: systemd-resolved
+        state: restarted
