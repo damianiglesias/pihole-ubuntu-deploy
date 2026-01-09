@@ -50,4 +50,13 @@ EOF
 
 
 echo -e "${GREEN} Python DNS installed at: $TARGET_DIR${NC}"
-echo -e "   Usage: ./run_dns_sync.sh"
+echo -e "${YELLOW}HOW TO USE THIS TOOL:${NC}"
+echo ""
+echo -e "  ${BLUE}1. Edit your DNS records:${NC}"
+echo -e "     nano $TARGET_DIR/entries.txt"
+echo ""
+echo -e "  ${BLUE}2. Sync changes to Pi-hole:${NC}"
+echo -e "     cd $TARGET_DIR && ./run_dns_sync.sh"
+echo ""
+echo -e "${GRAY}Note: The tool is pre-configured with your Pi-hole password.${NC}"
+echo ""
