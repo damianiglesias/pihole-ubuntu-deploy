@@ -40,3 +40,9 @@ cd pihole-ubuntu-deploy/ansible
 sudo apt update && sudo apt install ansible -y
 ### 4. Run the playbook
 ansible-playbook -i inventory.ini install_pihole.yml
+# Extras
+## Pi-hole dns
+### 1. Enter directory
+cd pihole-ubuntu-deploy/tools
+### 2. Run the script
+sudo ./piholedns
