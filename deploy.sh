@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # ==========================================
-# PI-HOLE All-In-One Script
+# PI-HOLE DEPLOYMENT SUITE
 # Author: Damian Iglesias
-# Version: 3.0
+# Version: 4.1
 # ==========================================
 
 GREEN='\033[0;32m'
@@ -12,9 +12,6 @@ BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
 GRAY='\033[1;30m'
 NC='\033[0m' 
-
-# Generate Random Password
-GENERATED_PASS=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 12)
 
 # --- HEADER ---
 clear
@@ -25,7 +22,7 @@ echo " | |_) |_      | |__   ___ | | ___  "
 echo " |  __/| |_____| '_ \ / _ \| |/ _ \ "
 echo " | |   | |_____| | | | (_) | |  __/ "
 echo " |_|   |_|     |_| |_|\___/|_|\___| "
-echo "           INSTALLER v3.0           "
+echo "           INSTALLER v4.1           "
 echo -e "${NC}"
 
 # 1. ROOT CHECK
@@ -33,61 +30,46 @@ if [ "$EUID" -ne 0 ]; then
   echo -e "${RED}ERROR: Please run as root (sudo ./deploy.sh)${NC}"
   exit 1
 fi
-# Check updates
-if command -v pihole &> /dev/null; then
-    echo -e "${YELLOW}  DETECTED: Pi-hole is already installed.${NC}"
-    echo ""
-    echo -e "   What would you like to do?"
-    echo -e "   [1] Update Everything (OS + Pi-hole + Lists)"
-    echo -e "   [2] Re-install / Re-configure (Run installer again)"
-    echo -e "   [3] Exit"
-    echo ""
-    read -p "   Select option [1-3]: " maint_choice
 
-    if [[ "$maint_choice" == "1" ]]; then
-        echo -e "${BLUE}⏳ Updating Ubuntu packages...${NC}"
-        apt-get update && apt-get upgrade -y
-        
-        echo -e "${BLUE}⏳ Updating Pi-hole Core...${NC}"
-        pihole -up
-        
-        echo -e "${BLUE}⏳ Updating Blocklists (Gravity)...${NC}"
-        pihole -g
-        
-        echo -e "${GREEN}✅ System is fully up to date!${NC}"
-        exit 0
-    elif [[ "$maint_choice" == "3" ]]; then
-        echo "Exiting..."
-        exit 0
-    fi
-    # If option 2, we continue down to the normal script...
-fi
-# 2. FIX PORT 53 
-echo -e "${YELLOW} Step 1: DNS configuration...${NC}"
-systemctl stop systemd-resolved
+# 2. FIX PORT 53 & FORCE INTERNET
+echo -e "${YELLOW} Step 1: Network Prep...${NC}"
+systemctl stop systemd-resolved > /dev/null 2>&1
 systemctl disable systemd-resolved > /dev/null 2>&1
 rm -f /etc/resolv.conf
 echo "nameserver 8.8.8.8" > /etc/resolv.conf
 echo "nameserver 1.1.1.1" >> /etc/resolv.conf
-echo -e "${GREEN}✅ DNS forced to Google. Port 53 free.${NC}"
+echo -e "${GREEN}✅ Port 53 freed & DNS forced to Google.${NC}"
+echo -e "${BLUE}⏳ Checking Internet connection...${NC}"
+sleep 2
+if ! ping -c 1 8.8.8.8 > /dev/null 2>&1; then
+    echo -e "${RED}❌ FATAL ERROR: No Internet connection detected.${NC}"
+    echo -e "${YELLOW}   Please check your VirtualBox Network Settings (Try NAT or Bridged).${NC}"
+    echo -e "${YELLOW}   The script cannot continue without Internet.${NC}"
+    exit 1
+fi
+echo -e "${GREEN}✅ Internet is ONLINE.${NC}"
 
 # 3. INSTALL DEPENDENCIES
 echo -e "${YELLOW} Step 2: Dependencies...${NC}"
-# Network check
-if ! ping -c 1 8.8.8.8 > /dev/null 2>&1; then
-    echo -e "${RED}❌ STILL NO INTERNET. Check your VirtualBox Network Settings!${NC}"
+apt-get update
+if [ $? -ne 0 ]; then
+    echo -e "${RED}❌ Apt update failed. Check your network.${NC}"
     exit 1
 fi
-
-apt-get update > /dev/null 2>&1
-apt-get install curl net-tools ufw sqlite3 wget -y > /dev/null 2>&1
-echo -e "${GREEN}✅ Dependencies installed.${NC}"
+apt-get install curl net-tools ufw sqlite3 wget python3 python3-venv python3-pip git -y
+echo -e "${GREEN} Dependencies installed.${NC}"
 
 # 4. INSTALL PI-HOLE
 echo -e "${YELLOW} Step 3: Installing Pi-hole Core...${NC}"
 echo -e "${GRAY}   (Follow the blue screens - Accept Defaults)${NC}"
 read -p "   Press [ENTER] to start..."
 curl -sSL https://install.pi-hole.net | bash
+
+# POST INSTALL VERIFY
+if ! command -v pihole &> /dev/null; then
+    echo -e "${RED}❌ Pi-hole installation FAILED. Please check the logs above.${NC}"
+    exit 1
+fi
 
 # INTERACTIVE BLOCKLISTS
 echo ""
@@ -102,6 +84,7 @@ if [[ "$list_choice" == "y" || "$list_choice" == "Y" ]]; then
     sqlite3 /etc/pihole/gravity.db "INSERT OR IGNORE INTO adlist (address, enabled, comment) VALUES ('$L1', 1, 'StevenBlack Unified');"
     sqlite3 /etc/pihole/gravity.db "INSERT OR IGNORE INTO adlist (address, enabled, comment) VALUES ('$L2', 1, 'Adguard Mobile');"
     sqlite3 /etc/pihole/gravity.db "INSERT OR IGNORE INTO adlist (address, enabled, comment) VALUES ('$L3', 1, 'EasyPrivacy Tracking');"
+    
     pihole -g > /dev/null 2>&1
     echo -e "${GREEN}✅ Database updated successfully.${NC}"
 else
@@ -110,9 +93,27 @@ fi
 
 # 5. PASSWORD SETUP
 echo ""
-echo -e "${YELLOW} Step 4: Security Setup${NC}"
-sleep 3
-pihole setpassword "$GENERATED_PASS"
+echo -e "${YELLOW}Step 4: Security Setup${NC}"
+echo -e "${BLUE}⏳ Please type your Web Admin Password:${NC}"
+
+while true; do
+    echo -ne "   > Password: "
+    read -s USER_PASS
+    echo ""
+    echo -ne "   > Confirm:  "
+    read -s USER_PASS_CONFIRM
+    echo ""
+    
+    if [ "$USER_PASS" == "$USER_PASS_CONFIRM" ] && [ ! -z "$USER_PASS" ]; then
+        break
+    else
+        echo -e "${RED}❌ Passwords do not match. Try again.${NC}"
+    fi
+done
+
+echo -e "${BLUE}⏳ Applying password...${NC}"
+# Método universal
+pihole setpassword "$USER_PASS" > /dev/null 2>&1
 systemctl restart pihole-FTL
 echo -e "${GREEN}✅ Password configured.${NC}"
 
@@ -125,7 +126,6 @@ if [[ "$unbound_choice" == "y" || "$unbound_choice" == "Y" ]]; then
     echo -e "${BLUE}⏳ Installing Unbound...${NC}"
     apt-get install unbound -y > /dev/null 2>&1
     wget -O /var/lib/unbound/root.hints https://www.internic.net/domain/named.root > /dev/null 2>&1
-    
     chown unbound:unbound /var/lib/unbound/root.hints
 
     cat <<EOF > /etc/unbound/unbound.conf.d/pi-hole.conf
@@ -159,7 +159,7 @@ else
     echo -e "${GRAY}⏭  Skipping Unbound.${NC}"
 fi
 
-# PADD DASHBOARD 
+#PADD DASHBOARD
 echo ""
 echo -e "${YELLOW} Step 4.8: PADD (Terminal Dashboard)${NC}"
 read -p "   Install PADD dashboard? [y/n]: " padd_choice
@@ -179,6 +179,45 @@ if [[ "$padd_choice" == "y" || "$padd_choice" == "Y" ]]; then
             echo -e "${GREEN}✅ Auto-start configured.${NC}"
         fi
     fi
+else
+    echo -e "${GRAY}⏭  Skipping PADD.${NC}"
+fi
+
+# --- PYTHON DNS MANAGER ---
+echo ""
+echo -e "${YELLOW}🐍Step 4.9: Python DNS Manager${NC}"
+read -p "   Install DNS Manager tool? [y/n]: " dns_tool_choice
+
+if [[ "$dns_tool_choice" == "y" || "$dns_tool_choice" == "Y" ]]; then
+    echo -e "${BLUE}⏳ Setting up Python environment...${NC}"
+    TARGET_DIR="/opt/pihole-dns-manager"
+    mkdir -p $TARGET_DIR
+    if [ -d "$TARGET_DIR/.git" ]; then
+        cd $TARGET_DIR && git pull > /dev/null 2>&1
+    else
+        git clone https://codeberg.org/ben/pihole_dns.git $TARGET_DIR > /dev/null 2>&1
+    fi
+    cd $TARGET_DIR
+    python3 -m venv venv
+    source venv/bin/activate
+    pip install requests > /dev/null 2>&1
+    cat <<EOF > run_dns_sync.sh
+#!/bin/bash
+export PIHOLE_URL="http://127.0.0.1"
+export PIHOLE_PASSWORD="$USER_PASS"
+echo "Syncing DNS records..."
+cd $TARGET_DIR
+source venv/bin/activate
+python3 pihole_dns.py "\$@"
+EOF
+    chmod +x run_dns_sync.sh
+    if [ ! -f entries.txt ]; then
+        echo "# Format: IP Domain" > entries.txt
+        echo "127.0.0.1  pihole.local" >> entries.txt
+    fi
+    echo -e "${GREEN}✅ DNS Tool installed.${NC}"
+else
+    echo -e "${GRAY}⏭  Skipping DNS Manager.${NC}"
 fi
 
 # 6. FIREWALL
@@ -190,15 +229,13 @@ echo "y" | ufw enable > /dev/null 2>&1
 
 # 7. STATIC IP
 echo ""
-echo -e "${YELLOW} Step 6: Static IP Configuration${NC}"
+echo -e "${YELLOW}Step 6: Static IP Configuration${NC}"
 ip -o link show | awk -F': ' '{print $2}' | grep -v "lo"
 read -p "   Type interface name (e.g. enp0s8): " SELECTED_IF
 
 if [[ -n "$SELECTED_IF" ]]; then
-    # Fix IP detection 
     CURRENT_IP=$(ip -4 addr show $SELECTED_IF 2>/dev/null | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | head -n1)
     CURRENT_GW=$(ip route | grep default | awk '{print $3}' | head -n1)
-    
     if [[ -z "$CURRENT_GW" ]]; then CURRENT_GW="192.168.1.1"; fi
 
     echo -e "   Selected: ${GREEN}$SELECTED_IF${NC} | IP: ${GREEN}$CURRENT_IP${NC}"
@@ -226,7 +263,7 @@ EOF
     fi
 fi
 
-# 8. REPORT FINAL
+# 8. FINAL REPORT
 clear
 if [[ -z "$FINAL_REPORT_IP" ]]; then
     if [[ -n "$SELECTED_IF" ]]; then
@@ -244,19 +281,19 @@ echo ""
 echo -e "${BLUE} Server IP:${NC}      $FINAL_REPORT_IP"
 echo -e "${BLUE} Web Interface:${NC}  http://$FINAL_REPORT_IP/admin"
 echo ""
-echo -e "${YELLOW} YOUR ADMIN PASSWORD:${NC}"
-echo -e "${RED}   $GENERATED_PASS ${NC}"
+echo -e "${YELLOW} PASSWORD:${NC}       ${RED}$USER_PASS${NC}"
 echo ""
 if [[ "$unbound_choice" == "y" || "$unbound_choice" == "Y" ]]; then
     echo -e "${YELLOW} UNBOUND INSTRUCTIONS:${NC}"
-    echo -e "   1. Login to Web Interface."
-    echo -e "   2. Go to Settings > DNS."
-    echo -e "   3. Uncheck 'Google' & Check 'Custom 1'."
-    echo -e "   4. Type: ${BLUE}127.0.0.1#5335${NC} and Save."
-    echo ""
+    echo -e "   1. Login to Web Interface -> Settings -> DNS"
+    echo -e "   2. Uncheck 'Google' & Check 'Custom 1': ${BLUE}127.0.0.1#5335${NC}"
 fi
 if [[ "$padd_choice" == "y" || "$padd_choice" == "Y" ]]; then
     echo -e "${YELLOW} PADD:${NC} Type ${BLUE}padd${NC} to view dashboard."
 fi
-echo -e "   (Enjoy!)"
+if [[ "$DNS_TOOL_INSTALLED" == "true" ]]; then
+    echo -e "${YELLOW} DNS MANAGER:${NC}"
+    echo -e "   Edit hosts at: ${BLUE}/opt/pihole-dns-manager/entries.txt${NC}"
+fi
+echo -e "   (ENJOY!)"
 echo ""
